@@ -1,0 +1,91 @@
+Program Main
+  character(*), parameter:: InputFile='input.txt',OutputFile='data.plt',sol_file='fields.plt' ! names of input and output files
+  character MeshFile*30        ! name of file with computational mesh
+  integer::	i,j,ni,nj
+  integer, parameter:: IO = 12 ! input-output unit
+  real,allocatable,dimension(:,:):: X,Y,P,CellVolume,DivV,DivV_t,DivV_res,lapP,lapP_t,lapP_res ! scalar arrays
+  real,allocatable,dimension(:,:,:):: CellCenter,IFaceCenter,IFaceVector,JFaceCenter,JFaceVector,&
+&									  GradP,GradP_t,GradP_res,V  ! vector arrays
+
+!===  READ INPUT FILE ===
+  WRITE(*,*) 'Read input file: ', InputFile
+  OPEN(IO,FILE=InputFile)
+  READ(IO,*) MeshFile  ! read name of file with computational mesh
+  CLOSE(IO)
+
+!===   READ NODES NUMBER (NI,NJ) FROM FILE WITH MESH ===
+  WRITE(*,*) 'Read nodes number from file: ', MeshFile
+  OPEN(IO,FILE = MeshFile)
+  READ(IO,*) NI,NJ
+  WRITE(*,*) 'NI, NJ = ',NI,NJ
+
+!=== ALLOCATE ALL ARRAYS ===
+  WRITE(*,*) 'Allocate arrays'       
+  allocate(X(NI,NJ)) ! mesh nodes X-coordinates
+  allocate(Y(NI,NJ)) ! mesh nodes Y-coordinates
+  allocate(P(0:NI,0:NJ))   ! Pressure
+  allocate(CellVolume(NI-1,NJ-1))   ! Cell Volumes    
+  allocate(CellCenter(0:NI,0:NJ,2)) ! Cell Centers
+  allocate(IFaceCenter( NI,NJ-1,2)) ! Face Centers for I-faces
+  allocate(IFaceVector( NI,NJ-1,2)) ! Face Vectors for I-faces
+  allocate(JFaceCenter( NI-1,NJ,2)) ! Face Centers for J-faces
+  allocate(JFaceVector( NI-1,NJ,2)) ! Face Vectors for J-faces
+  allocate(GradP(0:NI,0:NJ,2),GradP_t(0:NI,0:NJ,2),GradP_res(0:NI,0:NJ,2))  		! Pressure gradients array
+  allocate(V(0:NI,0:NJ,2),DivV(0:NI,0:NJ),DivV_t(0:NI,0:NJ),DivV_res(0:NI,0:NJ))	! Velocity vector and divergence arrays
+  allocate(lapP(0:NI,0:NJ),lapP_t(0:NI,0:NJ),lapP_res(0:NI,0:NJ))
+  gradP=0
+  
+
+!===  READ GRID ===
+  WRITE(*,*) 'Read mesh from file: ', MeshFile
+  READ(IO,*) ((X(I,J),Y(I,J),rtmp,I=1,NI),J=1,NJ)
+  CLOSE(IO)
+
+!=== CALCULATE METRIC ===
+  WRITE(*,*) 'Calculate metric'       
+  Call B_CalcMetric(NI,NJ,X,Y,CellCenter,CellVolume,IFaceCenter,IFaceVector,JFaceCenter,JFaceVector) 
+  
+!=== INITIATE FIELDS ===
+  WRITE(*,*) 'Initiate fields'       
+  DO  J = 0,NJ
+    DO  I = 0,NI
+	  GradP_t(I,J,1) = GradP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
+	  GradP_t(I,J,2) = GradP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
+	  divV_t(i,j) = divV_ter(CellCenter(I,J,1),CellCenter(i,j,2))
+	  lapP_t(i,j) = lapP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
+    ENDDO
+  ENDDO
+
+!=== INITIATE FIELDS ===
+open(io,file=sol_file)
+read(io,*)
+read(io,*)
+read(io,*) ((rtmp,rtmp,V(i,j,1),V(i,j,2),rtmp,P(i,j),rtmp,rtmp, i=0,NI), J=0,NJ)
+
+!=== CALCULATE GRADIENT ===
+  WRITE(*,*) 'Calculate derivatives'
+  do i=1,20
+  Call B_CalcGradient(NI,NJ,X,Y,P,GradP,CellVolume,CellCenter,    	  &
+&											IFaceVector,JFaceVector,  &
+&											IFaceCenter,JFaceCenter)
+  Call B_CalcGradRes(ni,nj,GradP,GradP_t,GradP_res)
+  enddo
+!===CALCULATE DIVERGENCE ===
+  call B_CalcDiv(NI,NJ,X,Y,V,DivV,CellVolume,CellCenter,    &
+&											IFaceVector,JFaceVector,  &
+&											IFaceCenter,JFaceCenter)
+  call B_CalcDivRes(NI,NJ,divV,divV_t,divV_res)
+
+!===CALCULATE LAPLACIAN ===
+  call B_CalcLap(NI,NJ,X,Y,p,lapP,CellVolume,CellCenter,    &
+&											IFaceVector,JFaceVector,  &
+&											IFaceCenter,JFaceCenter)
+  call B_CalcLapRes(NI,NJ,lapP,lapP_t,lapP_res)
+
+!=== OUTPUT FIELDS ===
+  WRITE(*,*) 'Output fields to file: ', OutputFile       
+  Open(IO,FILE=OutputFile)
+  Call B_OutputFields(IO,NI,NJ,X,Y,P,V,GradP,GradP_res,divV,divV_res,lapP,lapP_res)
+  Close(IO)
+
+END PROGRAM Main  
