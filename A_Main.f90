@@ -12,8 +12,7 @@ Program Main
   WRITE(*,*) 'Read input file: ', InputFile
   OPEN(IO,FILE=InputFile)
   READ(IO,*) MeshFile  ! read name of file with computational mesh
-  print*, MeshFile
-!  READ(IO,*) sch 	   ! 1 - linear, 2 - FOU, 3 - SOU
+  READ(IO,*) sch 	   ! 1 - linear, 2 - FOU, 3 - SOU
   CLOSE(IO)
 
 !===   READ NODES NUMBER (NI,NJ) FROM FILE WITH MESH ===
@@ -54,14 +53,12 @@ Program Main
   DO  J = 0,NJ
     DO  I = 0,NI
       P(I,J) = Pressure(CellCenter(I,J,1),CellCenter(i,j,2))
-	  V(i,j,:) = [CellCenter(I,J,1),CellCenter(i,j,2)]
-!	  V(I,J,:) = rVelocity(CellCenter(I,J,1),CellCenter(i,j,2))
+	  V(I,J,:) = rVelocity(CellCenter(I,J,1),CellCenter(i,j,2))
 	  GradP_t(I,J,1) = rGradP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
 	  GradP_t(I,J,2) = rGradP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
 	  divV_t(i,j) = rdivV_ter(CellCenter(I,J,1),CellCenter(i,j,2))
 	  divVP_t(i,j) = rdivVP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
-	  lapP_t(i,j) = 4.
-!	  lapP_t(i,j) = rlapP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
+	  lapP_t(i,j) = rlapP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
     ENDDO
   ENDDO
 
@@ -101,5 +98,38 @@ Program Main
   Open(IO,FILE=OutputFile)
   Call B_OutputFields(IO,NI,NJ,X,Y,P,V,GradP,GradP_res,divV,divV_res,lapP,lapP_res,divVP,divVP_res)
   Close(IO)
+
+	contains
+	
+Function Pressure(X,Y)
+  REAL:: PRESSURE, X, Y
+  Pressure = x**2+y**2
+End Function
+
+Function rVelocity(X,Y)
+  REAL:: rVelocity(2), X, Y
+  rVelocity(1) = x
+  rVelocity(2) = y
+End Function
+
+Function rGradP_ter(x,y)
+  real:: rGradP_ter, x, y
+  rGradP_ter = 1 
+End Function
+
+Function rdivV_ter(X,Y)
+  REAL:: rdivV_ter, X, Y
+  rdivV_ter = 2
+End Function
+
+Function rdivVP_ter(X,Y)
+  REAL:: rdivVP_ter, X, Y
+  rdivVP_ter = 4*(x*x+y*y)
+End Function
+
+Function rlapP_ter(X,Y)
+  REAL:: rlapP_ter, X, Y
+  rlapP_ter = 4
+End Function
 
 END PROGRAM Main  
