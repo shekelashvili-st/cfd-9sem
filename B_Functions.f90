@@ -3,23 +3,28 @@ Function Pressure(X,Y)
   Pressure = x**2+y**2
 End Function
 
-Function Velocity(X,Y)
-  REAL:: Velocity(2), X, Y
-  Velocity(1) = x
-  Velocity(2) = y
+Function rVelocity(X,Y)
+  REAL:: rVelocity(2), X, Y
+  rVelocity(1) = x
+  rVelocity(2) = y
 End Function
 
-Function GradP_ter(x,y)
-  real:: GradP_ter, x, y
-  GradP_ter = 1 
+Function rGradP_ter(x,y)
+  real:: rGradP_ter, x, y
+  rGradP_ter = 1 
 End Function
 
-Function divV_ter(X,Y)
-  REAL:: divV_ter, X, Y
-  divV_ter = 2
+Function rdivV_ter(X,Y)
+  REAL:: rdivV_ter, X, Y
+  rdivV_ter = 2
 End Function
 
-Function lapP_ter(X,Y)
-  REAL:: lapP_ter, X, Y
-  lapP_ter = 4
+Function rdivVP_ter(X,Y)
+  REAL:: rdivVP_ter, X, Y
+  rdivVP_ter = 4*(x*x+y*y)
+End Function
+
+Function rlapP_ter(X,Y)
+  REAL:: rlapP_ter, X, Y
+  rlapP_ter = 4
 End Function

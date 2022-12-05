@@ -27,13 +27,11 @@ Lap=0
 		distE = norm2(CellCenter(i+1,j,:) - CellCenter(i,j,:))
 		
 		W = E
-	    E = (p(i+1,j)-p(i,j))/distE !+ &
-!&					  (IFaceVector(i+1,j,:)-&
-!&				      (CellCenter(i+1,j,:)-CellCenter(i,j,:)))
+	    E = (p(i+1,j)-p(i,j))/distE 
 		
 		
 		Lap(i,j) = Lap(i,j) + 1/CellVolume(i,j) * &
-&			(-W*norm2(IFaceVector(i,j,:)) + E*norm2(IFaceVector(i+1,j,:))) 	
+&			(-W*norm2(IFaceVector(i,j,:)) + E*norm2(IFaceVector(i+1,j,:)))
 	end do
  end do
  
@@ -49,7 +47,7 @@ Lap=0
 		
 		
 		Lap(i,j) = Lap(i,j) + 1/CellVolume(i,j) * &
-&			(-S*norm2(JFaceVector(i,j,:)) + N*norm2(JFaceVector(i,j+1,:))) 	
+&			(-S*norm2(JFaceVector(i,j,:)) + N*norm2(JFaceVector(i,j+1,:)))
 	end do
  end do
  

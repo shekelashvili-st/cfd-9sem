@@ -1,8 +1,8 @@
 Subroutine B_CalcDivPhi(NI,NJ,X,Y,V,phi,gradPhi,Div,CellVolume,CellCenter,    &
 &											IFaceVector,JFaceVector,  &
-&											IFaceCenter,JFaceCenter)
+&											IFaceCenter,JFaceCenter, sch)
 implicit none
- integer::NI,NJ,I,J,sch=1
+ integer::NI,NJ,I,J,sch
  real,dimension(NI,NJ):: X,Y
  real,dimension(NI-1,NJ-1):: CellVolume ! scalar arrays
  real,dimension(0:NI,0:NJ,2):: V,gradPhi
@@ -14,13 +14,46 @@ implicit none
 
 real:: S(2),N(2),W(2),E(2),&			!Face values
 &	   r1(2),r2(2),        &			!Vectors from center to face
-&	   distN(2),distE(2)    			!Dist from center to face
+&	   distN(2),distE(2),  &  			!Dist from center to face
+&	   phi0, grad0(2)
 
 Div=0
 
  !В два обхода по всем ячейкам - по i и по j направлениям
  do j=1,NJ-1
+!Начальная грань 
 	E = V(0,j,:)
+	select case (sch)
+	!Центральная схема
+	case (1)
+		E = E * phi(0,j)
+	!FOU	
+	case (2)
+		if (dot_product(E,IFaceVector(1,j,:)) >= 0) then
+			phi0 = 2*phi(0,j) - phi(1,j)
+			E = E*phi0
+		else
+			E = E*phi(1,j)
+		end if		
+	!SOU
+	case (3)
+		!Расчёт и интерполяция градиента в заграничную ячейку // простой способ, 1 порядок точности на границе
+		!Линейная экстраполяция из первых двух ячеек i=1 и i=2
+		r2 = CellCenter(1,j,:) - IFaceCenter(1,j,:)
+		r1 = -r2
+		grad0 = gradPhi(2,j,:) - &
+&				2*norm2(CellCenter(1,j,:))/norm2(CellCenter(1,j,:)-CellCenter(2,j,:)) * (gradPhi(1,j,:) - gradPhi(2,j,:))
+		if (dot_product(E,IFaceVector(1,j,:)) >= 0) then
+			E = E * (phi(0,j) + &
+&					dot_product(grad0,r1))
+		else
+			E = E * (phi(1,j) + &
+&					dot_product(gradPhi(1,j,:),r2))
+		end if		
+		
+	case default
+		print*, 'Error, select interpolation scheme'						
+	end select
 	do i=1,NI-1
 		!Интерполяция на грани S->1, N->2, W->3, E->4
 		r1 = IFaceCenter(i+1,j,:) - CellCenter(i,j,:)
@@ -35,7 +68,6 @@ Div=0
 		!Центральная схема
 			case (1)
 				E = E*(phi(i+1,j)*distE(1) + phi(i,j)*distE(2))/sum(distE)
-			
 			!FOU
 			case (2)
 				if (dot_product(E,IFaceVector(i+1,j,:)) >= 0) then
@@ -65,6 +97,39 @@ Div=0
  
   do i=1,NI-1
 	N = V(i,0,:)
+!Начальная грань 
+	N = V(i,0,:)
+	select case (sch)
+	!Центральная схема
+	case (1)
+		N = N * phi(i,0)
+	!FOU	
+	case (2)
+		if (dot_product(N,JFaceVector(i,1,:)) >= 0) then
+			phi0 = 2*phi(i,0) - phi(i,1)
+			N = N*phi0
+		else
+			N = N*phi(i,1)
+		end if		
+	!SOU
+	case (3)
+		!Расчёт и интерполяция градиента в заграничную ячейку // простой способ, 1 порядок точности на границе
+		!Линейная экстраполяция из первых двух ячеек i=1 и i=2
+		r2 = CellCenter(i,1,:) - JFaceCenter(i,1,:)
+		r1 = -r2
+		grad0 = gradPhi(i,2,:) - &
+&				2*norm2(CellCenter(i,1,:))/norm2(CellCenter(i,1,:)-CellCenter(i,2,:)) * (gradPhi(i,1,:) - gradPhi(i,2,:))
+		if (dot_product(N,JFaceVector(i,1,:)) >= 0) then
+			N = N * (phi(i,0) + &
+&					dot_product(grad0,r1))
+		else
+			N = N * (phi(i,1) + &
+&					dot_product(gradPhi(i,1,:),r2))
+		end if		
+		
+	case default
+		print*, 'Error, select interpolation scheme'						
+	end select
 	do j=1,NJ-1
 		!Интерполяция на грани S->1, N->2, W->3, E->4
 		r1 = JFaceCenter(i,j+1,:) -  CellCenter(i,j,:)
