@@ -54,8 +54,7 @@ Program Main
     DO  I = 0,NI
       P(I,J) = Pressure(CellCenter(I,J,1),CellCenter(i,j,2))
 	  V(I,J,:) = rVelocity(CellCenter(I,J,1),CellCenter(i,j,2))
-	  GradP_t(I,J,1) = rGradP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
-	  GradP_t(I,J,2) = rGradP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
+	  GradP_t(I,J,:) = rGradP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
 	  divV_t(i,j) = rdivV_ter(CellCenter(I,J,1),CellCenter(i,j,2))
 	  divVP_t(i,j) = rdivVP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
 	  lapP_t(i,j) = rlapP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
@@ -88,7 +87,7 @@ Program Main
   call B_CalcDivphiRes(NI,NJ,divVP,divVP_t,divVP_res)
 
 !===CALCULATE LAPLACIAN ===
-  call B_CalcLap(NI,NJ,X,Y,p,lapP,CellVolume,CellCenter,    &
+  call B_CalcLap(NI,NJ,X,Y,p,gradP,lapP,CellVolume,CellCenter,    &
 &											IFaceVector,JFaceVector,  &
 &											IFaceCenter,JFaceCenter)
   call B_CalcLapRes(NI,NJ,lapP,lapP_t,lapP_res)
@@ -113,8 +112,9 @@ Function rVelocity(X,Y)
 End Function
 
 Function rGradP_ter(x,y)
-  real:: rGradP_ter, x, y
-  rGradP_ter = 1 
+  real:: rGradP_ter(2), x, y
+  rGradP_ter(1) = 2*x
+  rGradP_ter(2) = 2*y
 End Function
 
 Function rdivV_ter(X,Y)

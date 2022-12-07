@@ -4,7 +4,7 @@ integer:: ni,nj
 real,dimension(0:NI,0:NJ):: lapP,lapP_t,lapP_res
 
 lapP_res = 0
-lapP_res(1:NI-1,1:NJ-1) = abs(lapP(1:NI-1,1:NJ-1)-lapP_t(1:NI-1,1:NJ-1))
+lapP_res(1:NI-1,1:NJ-1) = abs(lapP(1:NI-1,1:NJ-1)-lapP_t(1:NI-1,1:NJ-1))/abs(lapP_t(1:NI-1,1:NJ-1))
 write(*,*) 'Max error, laplacian:', maxval(lapP_res)
 
 

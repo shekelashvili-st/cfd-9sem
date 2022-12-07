@@ -39,10 +39,10 @@ Div=0
 	case (3)
 		!Расчёт и интерполяция градиента в заграничную ячейку // простой способ, 1 порядок точности на границе
 		!Линейная экстраполяция из первых двух ячеек i=1 и i=2
-		r2 = CellCenter(1,j,:) - IFaceCenter(1,j,:)
+		r2 = -CellCenter(1,j,:) + IFaceCenter(1,j,:)
 		r1 = -r2
-		grad0 = gradPhi(2,j,:) - &
-&				2*norm2(CellCenter(1,j,:))/norm2(CellCenter(1,j,:)-CellCenter(2,j,:)) * (gradPhi(1,j,:) - gradPhi(2,j,:))
+		grad0 = gradPhi(2,j,:) + &
+&				norm2(-CellCenter(1,j,:)-CellCenter(2,j,:))/norm2(CellCenter(1,j,:)-CellCenter(2,j,:)) * (gradPhi(1,j,:) - gradPhi(2,j,:))
 		if (dot_product(E,IFaceVector(1,j,:)) >= 0) then
 			E = E * (phi(0,j) + &
 &					dot_product(grad0,r1))
@@ -54,7 +54,7 @@ Div=0
 	case default
 		print*, 'Error, select interpolation scheme'						
 	end select
-	do i=1,NI-1
+	do i=1,NI-2
 		!Интерполяция на грани S->1, N->2, W->3, E->4
 		r1 = IFaceCenter(i+1,j,:) - CellCenter(i,j,:)
 		r2 = CellCenter(i+1,j,:) - IFaceCenter(i+1,j,:)
@@ -93,10 +93,52 @@ Div=0
 		Div(i,j) = Div(i,j) + 1/CellVolume(i,j) * &
 &			(-dot_product(W,IFaceVector(i,j,:)) + dot_product(E,IFaceVector(i+1,j,:))) 	
 	end do
+	!Последняя итерация на границе
+		
+	W = E
+	!Без скаляра
+	E = V(ni,j,:)
+	select case (sch)
+	!Центральная схема
+	case (1)
+		E = E * phi(ni,j)
+	!FOU	
+	case (2)
+		if (dot_product(E,IFaceVector(ni,j,:)) >= 0) then
+			E = E*phi(ni-1,j)
+		else
+			phi0 = 2*phi(ni,j) - phi(ni-1,j)
+			E = E*phi0
+		end if		
+	!SOU
+	case (3)
+		!Расчёт и интерполяция градиента в заграничную ячейку // простой способ, 1 порядок точности на границе
+		!Линейная экстраполяция из последних двух ячеек
+		r1 = IFaceCenter(ni,j,:) - CellCenter(ni-1,j,:)
+		r2 = -r1
+		phi0 = 2*phi(ni,j) - phi(ni-1,j)
+		grad0 = gradPhi(ni-2,j,:) + &
+&				norm2(CellCenter(ni-1,j,:)+2*r1-CellCenter(ni-2,j,:))/norm2(CellCenter(ni-1,j,:)-CellCenter(ni-2,j,:)) &
+&				* (gradPhi(ni-1,j,:) - gradPhi(ni-2,j,:))
+		if (dot_product(E,IFaceVector(1,j,:)) >= 0) then
+			E = E * (phi(ni-1,j) + &
+&					dot_product(gradPhi(ni-1,j,:),r1))
+		else
+			E = E * (phi0 + &
+&					dot_product(grad0,r2))
+		end if		
+		
+	case default
+		print*, 'Error, select interpolation scheme'
+			
+	end select
+		
+	Div(ni-1,j) = Div(ni-1,j) + 1/CellVolume(ni-1,j) * &
+&		(-dot_product(W,IFaceVector(ni-1,j,:)) + dot_product(E,IFaceVector(ni,j,:))) 	
+		
  end do
  
   do i=1,NI-1
-	N = V(i,0,:)
 !Начальная грань 
 	N = V(i,0,:)
 	select case (sch)
@@ -115,12 +157,14 @@ Div=0
 	case (3)
 		!Расчёт и интерполяция градиента в заграничную ячейку // простой способ, 1 порядок точности на границе
 		!Линейная экстраполяция из первых двух ячеек i=1 и i=2
-		r2 = CellCenter(i,1,:) - JFaceCenter(i,1,:)
+		r2 = -CellCenter(i,1,:) + JFaceCenter(i,1,:)
 		r1 = -r2
-		grad0 = gradPhi(i,2,:) - &
-&				2*norm2(CellCenter(i,1,:))/norm2(CellCenter(i,1,:)-CellCenter(i,2,:)) * (gradPhi(i,1,:) - gradPhi(i,2,:))
+		phi0 = 2*phi(i,0) - phi(i,1)
+		grad0 = gradPhi(i,2,:) + &
+&				norm2(CellCenter(i,1,:)-2*r1-CellCenter(i,2,:))/norm2(CellCenter(i,1,:)-CellCenter(i,2,:)) &
+&			 * (gradPhi(i,1,:) - gradPhi(i,2,:))
 		if (dot_product(N,JFaceVector(i,1,:)) >= 0) then
-			N = N * (phi(i,0) + &
+			N = N * (phi0 + &
 &					dot_product(grad0,r1))
 		else
 			N = N * (phi(i,1) + &
@@ -130,10 +174,10 @@ Div=0
 	case default
 		print*, 'Error, select interpolation scheme'						
 	end select
-	do j=1,NJ-1
+	do j=1,NJ-2
 		!Интерполяция на грани S->1, N->2, W->3, E->4
 		r1 = JFaceCenter(i,j+1,:) -  CellCenter(i,j,:)
-		r2 = CellCenter(i,j+1,:) - JFaceCenter(i,j+1,:)
+		r2 = -CellCenter(i,j+1,:) + JFaceCenter(i,j+1,:)
 		distN(1) = norm2(r1)
 		distN(2) = norm2(r2)
 		
@@ -171,6 +215,49 @@ Div=0
 		Div(i,j) = Div(i,j) + 1/CellVolume(i,j) * &
 &			(-dot_product(S,JFaceVector(i,j,:)) + dot_product(N,JFaceVector(i,j+1,:))) 	
 	end do
+	!Последняя итерация на границе
+		
+	S = N
+	!Без скаляра
+	N = V(i,nj,:)
+	select case (sch)
+	!Центральная схема
+	case (1)
+		N = N * phi(i,nj)
+	!FOU	
+	case (2)
+		if (dot_product(N,JFaceVector(i,nj,:)) >= 0) then
+			N = N*phi(i,nj-1)
+		else
+			phi0 = 2*phi(i,nj) - phi(i,nj-1)
+			N = N*phi0
+		end if		
+	!SOU
+	case (3)
+		!Расчёт и интерполяция градиента в заграничную ячейку // простой способ, 1 порядок точности на границе
+		!Линейная экстраполяция из последних двух ячеек
+		r1 = JFaceCenter(i,nj,:) - CellCenter(i,nj-1,:)
+		r2 = -r1
+		phi0 = 2*phi(i,nj) - phi(i,nj-1)
+		grad0 = gradPhi(i,nj-2,:) + &
+&				norm2(CellCenter(i,nj-1,:)+2*r1-CellCenter(i,nj-2,:))/norm2(CellCenter(i,nj-1,:)-CellCenter(i,nj-2,:)) &
+&				* (gradPhi(i,nj-1,:) - gradPhi(i,nj-2,:))
+		if (dot_product(N,JFaceVector(1,j,:)) >= 0) then
+			N = N * (phi(i,nj-1) + &
+&					dot_product(gradPhi(i,nj-1,:),r1))
+		else
+			N = N * (phi0 + &
+&					dot_product(grad0,r2))
+		end if		
+		
+	case default
+		print*, 'Error, select interpolation scheme'
+			
+	end select
+		
+	Div(i,nj-1) = Div(i,nj-1) + 1/CellVolume(i,nj-1) * &
+&		(-dot_product(S,JFaceVector(i,nj-1,:)) + dot_product(N,JFaceVector(i,nj,:))) 	
+
  end do
  
 
