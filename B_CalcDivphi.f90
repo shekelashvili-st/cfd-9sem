@@ -15,7 +15,7 @@ implicit none
 real:: S(2),N(2),W(2),E(2),&			!Face values
 &	   r1(2),r2(2),        &			!Vectors from center to face
 &	   distN(2),distE(2),  &  			!Dist from center to face
-&	   phi0, grad0(2)
+&	   phi0, grad0(2), dphi
 
 Div=0
 
@@ -41,11 +41,15 @@ Div=0
 		!Линейная экстраполяция из первых двух ячеек i=1 и i=2
 		r2 = -CellCenter(1,j,:) + IFaceCenter(1,j,:)
 		r1 = -r2
-		grad0 = gradPhi(2,j,:) + &
-&				norm2(-CellCenter(1,j,:)-CellCenter(2,j,:))/norm2(CellCenter(1,j,:)-CellCenter(2,j,:)) * (gradPhi(1,j,:) - gradPhi(2,j,:))
+		dphi = (phi(1,j)-phi(0,j))/norm2(r1)
+		phi0 = 2*phi(0,j) - phi(1,j)
+		grad0 = dot_product(gradPhi(1,j,:),r1/norm2(r1)) 
+!		grad0 = gradPhi(2,j,:) + &
+!&				norm2(-CellCenter(1,j,:)-CellCenter(2,j,:))/norm2(CellCenter(1,j,:)-CellCenter(2,j,:)) * (gradPhi(1,j,:) - gradPhi(2,j,:))
+		grad0 = grad0 + 4*(dphi-grad0)
 		if (dot_product(E,IFaceVector(1,j,:)) >= 0) then
-			E = E * (phi(0,j) + &
-&					dot_product(grad0,r1))
+			E = E * (phi0 + &
+&					grad0)
 		else
 			E = E * (phi(1,j) + &
 &					dot_product(gradPhi(1,j,:),r2))
@@ -116,16 +120,19 @@ Div=0
 		!Линейная экстраполяция из последних двух ячеек
 		r1 = IFaceCenter(ni,j,:) - CellCenter(ni-1,j,:)
 		r2 = -r1
-		phi0 = 2*phi(ni,j) - phi(ni-1,j)
-		grad0 = gradPhi(ni-2,j,:) + &
-&				norm2(CellCenter(ni-1,j,:)+2*r1-CellCenter(ni-2,j,:))/norm2(CellCenter(ni-1,j,:)-CellCenter(ni-2,j,:)) &
-&				* (gradPhi(ni-1,j,:) - gradPhi(ni-2,j,:))
+		dphi = (phi(ni-1,j)-phi(ni,j))/norm2(r2)
+		grad0 = dot_product(gradPhi(ni-1,j,:),r2/norm2(r2))
+		phi0 = 2*phi(ni,j) - phi(ni-1,j) 
+!		grad0 = gradPhi(ni-2,j,:) + &
+!&				norm2(CellCenter(ni-1,j,:)+2*r1-CellCenter(ni-2,j,:))/norm2(CellCenter(ni-1,j,:)-CellCenter(ni-2,j,:)) &
+!&				* (gradPhi(ni-1,j,:) - gradPhi(ni-2,j,:))
+		grad0 = grad0 + 4*(dphi-grad0)
 		if (dot_product(E,IFaceVector(1,j,:)) >= 0) then
 			E = E * (phi(ni-1,j) + &
 &					dot_product(gradPhi(ni-1,j,:),r1))
 		else
 			E = E * (phi0 + &
-&					dot_product(grad0,r2))
+&					grad0)
 		end if		
 		
 	case default
@@ -160,12 +167,15 @@ Div=0
 		r2 = -CellCenter(i,1,:) + JFaceCenter(i,1,:)
 		r1 = -r2
 		phi0 = 2*phi(i,0) - phi(i,1)
-		grad0 = gradPhi(i,2,:) + &
-&				norm2(CellCenter(i,1,:)-2*r1-CellCenter(i,2,:))/norm2(CellCenter(i,1,:)-CellCenter(i,2,:)) &
-&			 * (gradPhi(i,1,:) - gradPhi(i,2,:))
+		dphi = (phi(i,j)-phi(i,0))/norm2(r1)
+		grad0 = dot_product(gradPhi(i,1,:),r1/norm2(r1)) 
+!		grad0 = gradPhi(i,2,:) + &
+!&				norm2(CellCenter(i,1,:)-2*r1-CellCenter(i,2,:))/norm2(CellCenter(i,1,:)-CellCenter(i,2,:)) &
+!&			 * (gradPhi(i,1,:) - gradPhi(i,2,:))
+		grad0 = grad0 + 4*(dphi-grad0)
 		if (dot_product(N,JFaceVector(i,1,:)) >= 0) then
 			N = N * (phi0 + &
-&					dot_product(grad0,r1))
+&					grad0)
 		else
 			N = N * (phi(i,1) + &
 &					dot_product(gradPhi(i,1,:),r2))
@@ -239,15 +249,18 @@ Div=0
 		r1 = JFaceCenter(i,nj,:) - CellCenter(i,nj-1,:)
 		r2 = -r1
 		phi0 = 2*phi(i,nj) - phi(i,nj-1)
-		grad0 = gradPhi(i,nj-2,:) + &
-&				norm2(CellCenter(i,nj-1,:)+2*r1-CellCenter(i,nj-2,:))/norm2(CellCenter(i,nj-1,:)-CellCenter(i,nj-2,:)) &
-&				* (gradPhi(i,nj-1,:) - gradPhi(i,nj-2,:))
+		grad0 = dot_product(gradPhi(i,nj-1,:),r2/norm2(r2))
+		phi0 = 2*phi(i,nj) - phi(i,nj-1) 
+!		grad0 = gradPhi(i,nj-2,:) + &
+!&				norm2(CellCenter(i,nj-1,:)+2*r1-CellCenter(i,nj-2,:))/norm2(CellCenter(i,nj-1,:)-CellCenter(i,nj-2,:)) &
+!&				* (gradPhi(i,nj-1,:) - gradPhi(i,nj-2,:))
+		grad0 = grad0 + 4*(dphi-grad0)
 		if (dot_product(N,JFaceVector(1,j,:)) >= 0) then
 			N = N * (phi(i,nj-1) + &
 &					dot_product(gradPhi(i,nj-1,:),r1))
 		else
 			N = N * (phi0 + &
-&					dot_product(grad0,r2))
+&					grad0)
 		end if		
 		
 	case default
