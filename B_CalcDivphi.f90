@@ -49,7 +49,7 @@ Div=0
 		grad0 = grad0 + 4*(dphi-grad0)
 		if (dot_product(E,IFaceVector(1,j,:)) >= 0) then
 			E = E * (phi0 + &
-&					grad0)
+&					grad0*norm2(r1))
 		else
 			E = E * (phi(1,j) + &
 &					dot_product(gradPhi(1,j,:),r2))
@@ -61,7 +61,7 @@ Div=0
 	do i=1,NI-2
 		!Интерполяция на грани S->1, N->2, W->3, E->4
 		r1 = IFaceCenter(i+1,j,:) - CellCenter(i,j,:)
-		r2 = CellCenter(i+1,j,:) - IFaceCenter(i+1,j,:)
+		r2 = -CellCenter(i+1,j,:) + IFaceCenter(i+1,j,:) !!!ПРОВЕРИТЬ ЗНАК
 		distE(1) = norm2(r1) 
 		distE(2) = norm2(r2)
 		
@@ -132,7 +132,7 @@ Div=0
 &					dot_product(gradPhi(ni-1,j,:),r1))
 		else
 			E = E * (phi0 + &
-&					grad0)
+&					grad0*norm2(r2)) !!! НОРМА МОЖЕТ БЫТЬ НЕ НУЖНА
 		end if		
 		
 	case default
@@ -175,7 +175,7 @@ Div=0
 		grad0 = grad0 + 4*(dphi-grad0)
 		if (dot_product(N,JFaceVector(i,1,:)) >= 0) then
 			N = N * (phi0 + &
-&					grad0)
+&					grad0*norm2(r2)) !!! НОРМА МОЖЕТ БЫТЬ НЕ НУЖНА
 		else
 			N = N * (phi(i,1) + &
 &					dot_product(gradPhi(i,1,:),r2))
@@ -248,7 +248,7 @@ Div=0
 		!Линейная экстраполяция из последних двух ячеек
 		r1 = JFaceCenter(i,nj,:) - CellCenter(i,nj-1,:)
 		r2 = -r1
-		phi0 = 2*phi(i,nj) - phi(i,nj-1)
+		dphi = (phi(i,nj-1)-phi(i,nj))/norm2(r2)
 		grad0 = dot_product(gradPhi(i,nj-1,:),r2/norm2(r2))
 		phi0 = 2*phi(i,nj) - phi(i,nj-1) 
 !		grad0 = gradPhi(i,nj-2,:) + &
@@ -260,7 +260,7 @@ Div=0
 &					dot_product(gradPhi(i,nj-1,:),r1))
 		else
 			N = N * (phi0 + &
-&					grad0)
+&					grad0*norm2(r2)) !!! НОРМА МОЖЕТ БЫТЬ НЕ НУЖНА
 		end if		
 		
 	case default

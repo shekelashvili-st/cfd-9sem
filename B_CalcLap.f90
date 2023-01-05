@@ -22,7 +22,10 @@ Lap=0
  do j=1,NJ-1
 	r1 = CellCenter(1,j,:) - IFaceCenter(1,j,:)
 	distC = norm2(r1)
-	E = 5/3*(p(1,j)-p(0,j))/distC - 2/3*dot_product(gradP(1,j,:),r1/distC)
+	r1 = r1/distC
+	E = 5/3*(p(1,j)-p(0,j))/distC - 2/3*dot_product(gradP(1,j,:),IFaceVector(1,j,:)/norm2(IFaceVector(1,j,:))) + &
+		dot_product((IFaceVector(1,j,:)/norm2(IFaceVector(1,j,:)) - r1),gradP(1,j,:))	
+	
 	do i=1,NI-2
 		!Расчёт производной на грани
 		distE(1) = norm2(IFaceCenter(i+1,j,:) - CellCenter(i,j,:)) 
@@ -44,7 +47,9 @@ Lap=0
 	W = E
 	r1 = CellCenter(ni-1,j,:) - IFaceCenter(ni,j,:)
 	distC = norm2(r1)
-	E = -(5/3*(p(ni-1,j)-p(ni,j))/distC - 2/3*dot_product(gradP(ni-1,j,:),r1/distC))
+	r1 = r1/distC
+	E = -(5/3*(p(ni-1,j)-p(ni,j))/distC - 2/3*dot_product(gradP(ni-1,j,:),-IFaceVector(ni,j,:)/norm2(IFaceVector(ni,j,:))) + &
+	dot_product((-IFaceVector(ni,j,:)/norm2(IFaceVector(ni,j,:)) - r1),gradP(ni-1,j,:)))
 	Lap(ni-1,j) = Lap(ni-1,j) + 1/CellVolume(ni-1,j) * &
 &		(-W*norm2(IFaceVector(ni-1,j,:)) + E*norm2(IFaceVector(ni,j,:)))	
  end do
@@ -52,7 +57,9 @@ Lap=0
   do i=1,NI-1
 	r1 = CellCenter(i,1,:) - JFaceCenter(i,1,:)
 	distC = norm2(r1)
-	N = 5/3*(p(i,1)-p(i,0))/distC - 2/3*dot_product(gradP(i,1,:),r1/distC)
+	r1 = r1/distC
+	N = 5/3*(p(i,1)-p(i,0))/distC - 2/3*dot_product(gradP(i,1,:),JFaceVector(i,1,:)/norm2(JFaceVector(i,1,:))) + &
+		dot_product((JFaceVector(i,1,:)/norm2(JFaceVector(i,1,:)) - r1),gradP(i,1,:))
 	do j=1,NJ-2
 		!Интерполяция на грани S->1, N->2, W->3, E->4
 		distN(1) = norm2(JFaceCenter(i,j+1,:) -  CellCenter(i,j,:))
@@ -74,7 +81,9 @@ Lap=0
 	S = N
 	r1 = CellCenter(i,nj-1,:) - JFaceCenter(i,nj,:)
 	distC = norm2(r1)
-	N = -(5/3*(p(i,nj-1)-p(i,nj))/distC - 2/3*dot_product(gradP(i,nj-1,:),r1/distC))
+	r1 = r1/distC
+	N = -(5/3*(p(i,nj-1)-p(i,nj))/distC - 2/3*dot_product(gradP(i,nj-1,:),-JFaceVector(i,nj,:)/norm2(JFaceVector(i,nj,:))) + &
+		dot_product((-JFaceVector(i,nj,:)/norm2(JFaceVector(i,nj,:)) - r1),gradP(i,nj-1,:)))
 	
 	Lap(i,nj-1) = Lap(i,nj-1) + 1/CellVolume(i,nj-1) * &
 &		(-S*norm2(JFaceVector(i,nj-1,:)) + N*norm2(JFaceVector(i,nj,:)))
