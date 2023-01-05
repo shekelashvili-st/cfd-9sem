@@ -4,7 +4,7 @@ Program Main
   integer::	i,j,ni,nj,sch=3
   integer, parameter:: IO = 12 ! input-output unit
   real,allocatable,dimension(:,:):: X,Y,P,CellVolume,DivV,DivV_t,DivV_res,lapP,lapP_t,lapP_res, &
-&									DivVP,DivVP_t,DivVP_res  	 ! scalar arrays
+&									DivVP,DivVP_t,DivVP_res,CurlV,CurlV_t,CurlV_res  	 ! scalar arrays
   real,allocatable,dimension(:,:,:):: CellCenter,IFaceCenter,IFaceVector,JFaceCenter,JFaceVector,&
 &									  GradP,GradP_t,GradP_res,V  ! vector arrays
 
@@ -36,6 +36,7 @@ Program Main
   allocate(V(0:NI,0:NJ,2),DivV(0:NI,0:NJ),DivV_t(0:NI,0:NJ),DivV_res(0:NI,0:NJ), &
 &			             DivVP(0:NI,0:NJ),DivVP_t(0:NI,0:NJ),DivVP_res(0:NI,0:NJ))	! Velocity vector and divergence arrays
   allocate(lapP(0:NI,0:NJ),lapP_t(0:NI,0:NJ),lapP_res(0:NI,0:NJ))
+  allocate(CurlV(0:NI,0:NJ),CurlV_t(0:NI,0:NJ),CurlV_res(0:NI,0:NJ))
   gradP=0
   
 
@@ -58,6 +59,7 @@ Program Main
 	  divV_t(i,j) = rdivV_ter(CellCenter(I,J,1),CellCenter(i,j,2))
 	  divVP_t(i,j) = rdivVP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
 	  lapP_t(i,j) = rlapP_ter(CellCenter(I,J,1),CellCenter(i,j,2))
+	  curlV_t(i,j) = rCurlV_ter(CellCenter(I,J,1),CellCenter(i,j,2))
     ENDDO
   ENDDO
 
@@ -92,10 +94,16 @@ Program Main
 &											IFaceCenter,JFaceCenter)
   call B_CalcLapRes(NI,NJ,lapP,lapP_t,lapP_res)
 
+!===CALCULATE CURL ===
+  call B_CalcCurl(NI,NJ,X,Y,V,CurlV,CellVolume,CellCenter,    &
+&											IFaceVector,JFaceVector,  &
+&											IFaceCenter,JFaceCenter)
+  call B_CalcCurlRes(NI,NJ,curlV,curlV_t,curlV_res)
+
 !=== OUTPUT FIELDS ===
   WRITE(*,*) 'Output fields to file: ', OutputFile       
   Open(IO,FILE=OutputFile)
-  Call B_OutputFields(IO,NI,NJ,X,Y,P,V,GradP,GradP_res,divV,divV_res,lapP,lapP_res,divVP,divVP_res)
+  Call B_OutputFields(IO,NI,NJ,X,Y,P,V,GradP,GradP_res,divV,divV_res,lapP,lapP_res,divVP,divVP_res,curlV,curlV_res)
   Close(IO)
 
 	contains
@@ -130,6 +138,11 @@ End Function
 Function rlapP_ter(X,Y)
   REAL:: rlapP_ter, X, Y
   rlapP_ter = 4
+End Function
+
+Function rCurlV_ter(X,Y)
+  REAL:: rCurlV_ter, X, Y
+  rCurlV_ter = 1
 End Function
 
 END PROGRAM Main  
