@@ -1,7 +1,7 @@
 Program Main
   character(*), parameter:: InputFile='input.txt',OutputFile='data.plt',sol_file='fields.plt' ! names of input and output files
   character MeshFile*30       ! name of file with computational mesh
-  integer::	i,j,ni,nj,sch=3
+  integer::	i,j,ni,nj,sch=3,sols = 0
   integer, parameter:: IO = 12 ! input-output unit
   real,allocatable,dimension(:,:):: X,Y,P,CellVolume,DivV,DivV_t,DivV_res,lapP,lapP_t,lapP_res, &
 &									DivVP,DivVP_t,DivVP_res,CurlV,CurlV_t,CurlV_res  	 ! scalar arrays
@@ -13,6 +13,7 @@ Program Main
   OPEN(IO,FILE=InputFile)
   READ(IO,*) MeshFile  ! read name of file with computational mesh
   READ(IO,*) sch 	   ! 1 - linear, 2 - FOU, 3 - SOU
+  READ(IO,*) sols 	   ! 0 - initialize fields from func, 1 - initialize from solution file
   CLOSE(IO)
 
 !===   READ NODES NUMBER (NI,NJ) FROM FILE WITH MESH ===
@@ -64,10 +65,14 @@ Program Main
   ENDDO
 
 !=== INITIATE FIELDS ===
-!open(io,file=sol_file)
-!read(io,*)
-!read(io,*)
-!read(io,*) ((rtmp,rtmp,V(i,j,1),V(i,j,2),rtmp,P(i,j),rtmp,rtmp, i=0,NI), J=0,NJ)
+  if (sols == 1) then
+	P = 0; V = 0 
+	open(io,file=sol_file)
+	read(io,*)
+	read(io,*)
+	read(io,*) ((rtmp,rtmp,V(i,j,1),V(i,j,2),rtmp,P(i,j),rtmp,rtmp, i=0,NI), J=0,NJ)
+	close(io)
+  end if
 
 !=== CALCULATE GRADIENT ===
   WRITE(*,*) 'Calculate derivatives'
