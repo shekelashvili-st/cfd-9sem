@@ -49,7 +49,7 @@ Div=0
 		grad0 = grad0 + 4*(dphi-grad0)
 		if (dot_product(E,IFaceVector(1,j,:)) >= 0) then
 			E = E * (phi0 + &
-&					grad0*norm2(r1))
+&					grad0*norm2(r2))
 		else
 			E = E * (phi(1,j) + &
 &					dot_product(gradPhi(1,j,:),r2))
@@ -167,7 +167,7 @@ Div=0
 		r2 = -CellCenter(i,1,:) + JFaceCenter(i,1,:)
 		r1 = -r2
 		phi0 = 2*phi(i,0) - phi(i,1)
-		dphi = (phi(i,j)-phi(i,0))/norm2(r1)
+		dphi = (phi(i,1)-phi(i,0))/norm2(r1)
 		grad0 = dot_product(gradPhi(i,1,:),r1/norm2(r1)) 
 !		grad0 = gradPhi(i,2,:) + &
 !&				norm2(CellCenter(i,1,:)-2*r1-CellCenter(i,2,:))/norm2(CellCenter(i,1,:)-CellCenter(i,2,:)) &
@@ -201,7 +201,7 @@ Div=0
 			
 			!FOU
 			case (2)
-				if (dot_product(N,IFaceVector(i+1,j,:)) >= 0) then
+				if (dot_product(N,JFaceVector(i,j+1,:)) >= 0) then
 					N = N*phi(i,j)
 				else
 					N = N*phi(i,j+1)
@@ -209,7 +209,7 @@ Div=0
 			
 			!SOU
 			case (3)
-				if (dot_product(N,IFaceVector(i+1,j,:)) >= 0) then
+				if (dot_product(N,JFaceVector(i,j+1,:)) >= 0) then
 					N = N * (phi(i,j) + &
 		&					dot_product(gradPhi(i,j,:),r1))
 				else
