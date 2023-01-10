@@ -120,8 +120,8 @@ End Function
 
 Function rVelocity(X,Y)
   REAL:: rVelocity(2), X, Y
-  rVelocity(1) = 1
-  rVelocity(2) = 1
+  rVelocity(1) = x*y**3
+  rVelocity(2) = 2*x**3*y
 End Function
 
 Function rGradP_ter(x,y)
@@ -147,7 +147,7 @@ End Function
 
 Function rCurlV_ter(X,Y)
   REAL:: rCurlV_ter, X, Y
-  rCurlV_ter = 1
+  rCurlV_ter = 6*x**2*y-3*y**2*x
 End Function
 
 END PROGRAM Main  
