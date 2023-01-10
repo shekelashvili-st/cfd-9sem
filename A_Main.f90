@@ -1,19 +1,30 @@
 Program Main
-  character(*), parameter:: InputFile='input.txt',OutputFile='data.plt',sol_file='fields.plt' ! names of input and output files
+  implicit none
+  character(*), parameter:: InputFile='input.txt',OutputFile='data.plt',sol_file='fields.plt', &
+							input_cavern='params.nml'							                ! names of input and output files
   character MeshFile*30       ! name of file with computational mesh
-  integer::	i,j,ni,nj,sch=3,sols = 0
+  integer::	i,j,ni,nj,m,nm,sch=3,sols = 0,cavern=0, iu
   integer, parameter:: IO = 12 ! input-output unit
   real,allocatable,dimension(:,:):: X,Y,P,CellVolume,DivV,DivV_t,DivV_res,lapP,lapP_t,lapP_res, &
 &									DivVP,DivVP_t,DivVP_res,CurlV,CurlV_t,CurlV_res  	 ! scalar arrays
   real,allocatable,dimension(:,:,:):: CellCenter,IFaceCenter,IFaceVector,JFaceCenter,JFaceVector,&
 &									  GradP,GradP_t,GradP_res,V  ! vector arrays
+!Решение уравнения переноса
+  real:: Re, Pr, eps_T, eps, T1, T2, dt, rtmp, CFL
+  real, allocatable:: T(:,:), T_new(:,:), gradT(:,:,:), conv(:,:), dif(:,:), res(:,:)
 
 !===  READ INPUT FILE ===
+  namelist /params_cavern/ Re, Pr, T1, T2, CFL, eps, nm
+  open(newunit=iu, file=input_cavern)
+  read(iu, nml=params_cavern)
+  close(iu)
+  
   WRITE(*,*) 'Read input file: ', InputFile
   OPEN(IO,FILE=InputFile)
   READ(IO,*) MeshFile  ! read name of file with computational mesh
   READ(IO,*) sch 	   ! 1 - linear, 2 - FOU, 3 - SOU
   READ(IO,*) sols 	   ! 0 - initialize fields from func, 1 - initialize from solution file
+  READ(IO,*) cavern    ! 0 - без решения ур. переноса, 1 - с решением ур. переноса
   CLOSE(IO)
 
 !===   READ NODES NUMBER (NI,NJ) FROM FILE WITH MESH ===
@@ -38,7 +49,16 @@ Program Main
 &			             DivVP(0:NI,0:NJ),DivVP_t(0:NI,0:NJ),DivVP_res(0:NI,0:NJ))	! Velocity vector and divergence arrays
   allocate(lapP(0:NI,0:NJ),lapP_t(0:NI,0:NJ),lapP_res(0:NI,0:NJ))
   allocate(CurlV(0:NI,0:NJ),CurlV_t(0:NI,0:NJ),CurlV_res(0:NI,0:NJ))
-  gradP=0
+  allocate(T(0:NI,0:NJ),T_new(0:NI,0:NJ),gradT(0:NI,0:NJ,2),conv(0:NI,0:NJ),dif(0:NI,0:NJ),res(0:NI,0:NJ))
+  gradP = 0
+  divV = 0
+  divVP = 0
+  lapP = 0
+  CurlV = 0
+  T = 0
+  gradT = 0
+  conv = 0
+  dif = 0
   
 
 !===  READ GRID ===
@@ -105,11 +125,49 @@ Program Main
 &											IFaceCenter,JFaceCenter)
   call B_CalcCurlRes(NI,NJ,curlV,curlV_t,curlV_res)
 
+! Решение уравнения конвективно-диффузионного переноса
+dt = CFL * 0.02 / maxval(V)
+!Граничные условия
+T = 100
+T(0,:) = T1
+T(NI,:) = T2
+T(:,0) = T(:,1)
+T(:,NJ) = T(:,NJ-1)
+
+
+  do m=1,nm
+		!Расчёт невязки
+		Call B_CalcGradient(NI,NJ,X,Y,T,GradT,CellVolume,CellCenter,    	  &
+		&											IFaceVector,JFaceVector,  &
+		&											IFaceCenter,JFaceCenter)
+		call B_CalcDivphi(NI,NJ,X,Y,V,T,gradT,conv,CellVolume,CellCenter,    &
+		&											IFaceVector,JFaceVector,   &
+		&											IFaceCenter,JFaceCenter,sch)
+		call B_CalcLap(NI,NJ,X,Y,T,gradT,dif,CellVolume,CellCenter,    &
+		&											IFaceVector,JFaceVector,  &
+		&											IFaceCenter,JFaceCenter)
+		res = dif/(Re*Pr) - conv
+		
+		!Расчёт температуры на следующем слое
+		T_new = T + res*dt
+		
+		T(:,0) = T(:,1)
+		T(:,NJ) = T(:,NJ-1)
+		!Проверка сходимости
+		eps_T = maxval(abs(T_new(1:ni-1,1:nj-1) - T(1:ni-1,1:nj-1))) / maxval(abs(T_new(1:ni-1,1:nj-1)))
+		print*, 'Iteration:', m, 'eps_T:', eps_T
+		
+		if (eps_T < eps) exit
+		T = T_new
+		
+  end do
+
 !=== OUTPUT FIELDS ===
   WRITE(*,*) 'Output fields to file: ', OutputFile       
   Open(IO,FILE=OutputFile)
-  Call B_OutputFields(IO,NI,NJ,X,Y,P,V,GradP,GradP_res,divV,divV_res,lapP,lapP_res,divVP,divVP_res,curlV,curlV_res)
+  Call B_OutputFields(IO,NI,NJ,X,Y,P,V,GradP,GradP_res,divV,divV_res,lapP,lapP_res,divVP,divVP_res,curlV,curlV_res,T)
   Close(IO)
+
 
 	contains
 	
