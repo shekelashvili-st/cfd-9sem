@@ -10,7 +10,7 @@ Program Main
   real,allocatable,dimension(:,:,:):: CellCenter,IFaceCenter,IFaceVector,JFaceCenter,JFaceVector,&
 &									  GradP,GradP_t,GradP_res,V  ! vector arrays
 !Решение уравнения переноса
-  real:: Re, Pr, eps_T, eps, T1, T2, dt, rtmp, CFL
+  real:: Re, Pr, eps_T, eps, T1, T2, dt, rtmp, CFL, VNM, Vf(2), distf(2), sumF, totF, r1(2), r2(2)
   real, allocatable:: T(:,:), T_new(:,:), gradT(:,:,:), conv(:,:), dif(:,:), res(:,:)
 
 !===  READ INPUT FILE ===
@@ -59,7 +59,7 @@ Program Main
   gradT = 0
   conv = 0
   dif = 0
-  
+  res = 0
 
 !===  READ GRID ===
   WRITE(*,*) 'Read mesh from file: ', MeshFile
@@ -126,11 +126,16 @@ Program Main
   call B_CalcCurlRes(NI,NJ,curlV,curlV_t,curlV_res)
 
 ! Решение уравнения конвективно-диффузионного переноса
-dt = CFL * 0.02 / maxval(V)
+VNM = CFL
+rtmp = maxval(norm2(IFaceVector,dim=3))
+rtmp = max(rtmp,maxval(norm2(JFaceVector,dim=3)))
+rtmp = minval(CellVolume(1:ni-1,1:nj-1))/rtmp
+dt = 1/(1/(CFL * rtmp / maxval(norm2(V,dim=3))) + 1/(VNM*rtmp*rtmp*(Re*Pr)/2))
+print*, dt
 !Граничные условия
-T = 100
 T(0,:) = T1
 T(NI,:) = T2
+T = (T2+T1)/2
 T(:,0) = T(:,1)
 T(:,NJ) = T(:,NJ-1)
 
@@ -149,10 +154,51 @@ T(:,NJ) = T(:,NJ-1)
 		res = dif/(Re*Pr) - conv
 		
 		!Расчёт температуры на следующем слое
-		T_new = T + res*dt
+		do j=1,nj-1
+		do i=1,ni-1
+			! !Расчёт расходов на гранях
+			! !Грань E
+			! r1 = IFaceCenter(i+1,j,:) - CellCenter(i,j,:)
+			! r2 = -CellCenter(i+1,j,:) + IFaceCenter(i+1,j,:) !!!ПРОВЕРИТЬ ЗНАК
+			! distf(1) = norm2(r1) 
+			! distf(2) = norm2(r2)
+			! Vf = (V(i+1,j,:)*distf(1) + V(i,j,:)*distf(2))/sum(distf)
+			! sumF = abs(dot_product(Vf,IFaceVector(i+1,j,:)))
+			! !Грань W
+			! r1 = IFaceCenter(i,j,:) - CellCenter(i-1,j,:)
+			! r2 = -CellCenter(i,j,:) + IFaceCenter(i,j,:) !!!ПРОВЕРИТЬ ЗНАК
+			! distf(1) = norm2(r1) 
+			! distf(2) = norm2(r2)
+			! Vf = (V(i,j,:)*distf(1) + V(i-1,j,:)*distf(2))/sum(distf)
+			! sumF = sumF + abs(dot_product(Vf,IFaceVector(i,j,:)))
+			! !Грань N
+			! r1 = JFaceCenter(i,j+1,:) - CellCenter(i,j,:)
+			! r2 = -CellCenter(i,j+1,:) + JFaceCenter(i,j+1,:) !!!ПРОВЕРИТЬ ЗНАК
+			! distf(1) = norm2(r1) 
+			! distf(2) = norm2(r2)
+			! Vf = (V(i,j+1,:)*distf(1) + V(i,j,:)*distf(2))/sum(distf)
+			! sumF = sumF + abs(dot_product(Vf,JFaceVector(i,j+1,:)))
+			! !Грань S
+			! r1 = JFaceCenter(i,j,:) - CellCenter(i,j-1,:)
+			! r2 = -CellCenter(i,j,:) + JFaceCenter(i,j,:) !!!ПРОВЕРИТЬ ЗНАК
+			! distf(1) = norm2(r1) 
+			! distf(2) = norm2(r2)
+			! Vf = (V(i,j,:)*distf(1) + V(i,j-1,:)*distf(2))/sum(distf)
+			! sumF = sumF + abs(dot_product(Vf,JFaceVector(i,j,:)))			
+			! !Расчёт шага по времени для ячейки
+
+			! totF = norm2(JFaceVector(i,j,:)) + norm2(JFaceVector(i,j+1,:)) + norm2(IFaceVector(i+1,j,:)) + norm2(IFaceVector(i,j,:))
+			! dt = 1 / (1/(CFL*CellVolume(i,j)/sumF) + 1/(VNM*Pr*Re*totF/2))
+			
+			T_new(i,j) = T(i,j) + res(i,j)*dt
+		enddo
+		enddo
+!		T_new = T + res*dt
 		
-		T(:,0) = T(:,1)
-		T(:,NJ) = T(:,NJ-1)
+		T_new(0,:) = T1
+		T_new(NI,:) = T2
+		T_new(:,0) = T_new(:,1)
+		T_new(:,NJ) = T_new(:,NJ-1)
 		!Проверка сходимости
 		eps_T = maxval(abs(T_new(1:ni-1,1:nj-1) - T(1:ni-1,1:nj-1))) / maxval(abs(T_new(1:ni-1,1:nj-1)))
 		print*, 'Iteration:', m, 'eps_T:', eps_T
