@@ -126,6 +126,7 @@ Program Main
   call B_CalcCurlRes(NI,NJ,curlV,curlV_t,curlV_res)
 
 ! Решение уравнения конвективно-диффузионного переноса
+if (cavern==1) then
 VNM = CFL
 rtmp = maxval(norm2(IFaceVector,dim=3))
 rtmp = max(rtmp,maxval(norm2(JFaceVector,dim=3)))
@@ -207,7 +208,7 @@ T(:,NJ) = T(:,NJ-1)
 		T = T_new
 		
   end do
-
+end if
 !=== OUTPUT FIELDS ===
   WRITE(*,*) 'Output fields to file: ', OutputFile       
   Open(IO,FILE=OutputFile)

@@ -1,4 +1,4 @@
-cavern.msh
+pipe.msh
 3
 1
 0
